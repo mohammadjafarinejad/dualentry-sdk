@@ -44,6 +44,34 @@ try {
 }
 ```
 
+### Python
+
+```py
+import os
+from dualentry import DualEntry
+from dualentry.errors import DualEntryNotFoundError, DualEntryValidationError
+
+client = DualEntry(api_key=os.environ["DUALENTRY_API_KEY"])
+
+# List posted invoices
+invoices = client.invoices.list(status="posted")
+
+# Auto-paginate through all bills
+for bill in client.bills.list_all():
+    print(bill.id, bill.total)
+
+# Create a customer
+customer = client.customers.create(
+    name="Acme Corp",
+    email="billing@acme.com",
+)
+
+try:
+    client.invoices.get("inv-missing")
+except DualEntryValidationError as e:
+    print(e.errors)  # { 'field': ['message'] }
+```
+
 ## Errors
 
 | Class | HTTP Status |
