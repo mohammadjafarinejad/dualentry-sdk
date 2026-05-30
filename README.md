@@ -25,12 +25,15 @@ import { DualEntry } from "@dualentry/sdk";
 const client = new DualEntry({ apiKey: process.env.DUALENTRY_API_KEY! });
 
 // List invoices (single page)
-const page = await client.invoices.list({ record_status: "posted", limit: 50 });
+const page = await client.invoices.list({
+  record_status: ["posted"],
+  limit: 50,
+});
 console.log(`${page.count} total invoices`);
 
 // Iterate through every invoice without manual pagination
 for await (const invoice of client.invoices.listAll({
-  record_status: "posted",
+  record_status: ["posted"],
 })) {
   console.log(invoice.number, invoice.amount_due);
 }
@@ -45,9 +48,6 @@ const created = await client.invoices.create({
   date: "2026-05-01",
   items: [{ item_id: 5, quantity: 2, rate: "250.00" }],
 });
-
-// Update an invoice
-const updated = await client.invoices.update(1001, { memo: "Revised" });
 ```
 
 ## Error handling
