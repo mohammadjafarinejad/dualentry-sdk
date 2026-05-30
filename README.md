@@ -1,4 +1,4 @@
-<img src="https://images.prismic.io/contrary-research/aNbX0J5xUNkB1Kmi_DualEntry_Square.png?auto=format,compress" width="100"/>
+<img src="./assets/logo.jpg" width="100"/>
 
 # dualentry-sdk
 
@@ -14,35 +14,74 @@ Idiomatic, fully typed SDK clients for TypeScript and Python — generated from 
 
 ## Quickstart
 
+<details>
+<summary><strong>TypeScript Example</strong></summary>
+
 ### TypeScript
 
 ```typescript
-import { DualEntry, DualEntryNotFoundError, DualEntryValidationError } from '@dualentry/sdk';
+import { DualEntry } from "@dualentry/sdk";
 
-const client = new DualEntry({ apiKey: process.env.DUALENTRY_API_KEY });
+const client = new DualEntry({ apiKey: process.env.DUALENTRY_API_KEY! });
 
-// List posted invoices
-const invoices = await client.invoices.list({ status: 'posted' });
+// List invoices (single page)
+const page = await client.invoices.list({
+  record_status: ["posted"],
+  limit: 50,
+});
+console.log(`${page.count} total invoices`);
 
-// Auto-paginate through all bills
-for await (const bill of client.bills.listAll()) {
-  console.log(bill.id, bill.total);
+// Iterate through every invoice without manual pagination
+for await (const invoice of client.invoices.listAll({
+  record_status: ["posted"],
+})) {
+  console.log(invoice.number, invoice.amount_due);
 }
 
-// Create a customer
-const customer = await client.customers.create({
-  name: 'Acme Corp',
-  email: 'billing@acme.com',
+// Get a single invoice
+const invoice = await client.invoices.get(1001);
+
+// Create an invoice
+const created = await client.invoices.create({
+  company_id: 10,
+  customer_id: 42,
+  date: "2026-05-01",
+  items: [{ item_id: 5, quantity: 2, rate: "250.00" }],
 });
+```
+
+## Error handling
+
+All errors extend `DualEntryError`, so you can catch broadly or narrow to specific conditions.
+
+```ts
+import {
+  DualEntryNotFoundError,
+  DualEntryValidationError,
+  DualEntryAuthError,
+  DualEntryRateLimitError,
+  DualEntryServerError,
+} from "@dualentry/sdk";
 
 try {
-  await client.invoices.get('inv-missing');
-} catch (e) {
-  if (e instanceof DualEntryValidationError) {
-    console.log(e.errors); // { field: ['message'] }
+  const inv = await client.invoices.get(9999);
+} catch (err) {
+  if (err instanceof DualEntryNotFoundError) {
+    console.log("Invoice does not exist");
+  } else if (err instanceof DualEntryValidationError) {
+    console.log("Validation errors:", err.errors);
+  } else if (err instanceof DualEntryAuthError) {
+    console.log("Check your API key");
   }
 }
 ```
+
+</details>
+
+---
+
+<details>
+<summary><strong>Python Example</strong></summary>
 
 ### Python
 
@@ -72,17 +111,33 @@ except DualEntryValidationError as e:
     print(e.errors)  # { 'field': ['message'] }
 ```
 
-## Errors
-
-| Class | HTTP Status |
-|---|---|
-| `DualEntryAuthError` | 401, 403 |
-| `DualEntryNotFoundError` | 404 |
-| `DualEntryValidationError` | 422 |
-| `DualEntryRateLimitError` | 429 |
-| `DualEntryServerError` | 500, 503 |
+</details>
 
 ---
+
+## Errors
+
+| Class                      | Status code(s) |
+| -------------------------- | -------------- |
+| `DualEntryAuthError`       | 401, 403       |
+| `DualEntryNotFoundError`   | 404            |
+| `DualEntryValidationError` | 422            |
+| `DualEntryRateLimitError`  | 429            |
+| `DualEntryServerError`     | 500, 503       |
+
+---
+
+## Required methods per resource
+
+Every resource must expose these five methods:
+
+| Method          | Signature                             |
+| --------------- | ------------------------------------- |
+| List (one page) | `list(filters?)`                      |
+| Fetch one       | `get(id)`                             |
+| Create          | `create(data)`                        |
+| Update (full)   | `update(id, data)`                    |
+| Auto-paginate   | `listAll(filters?)` → `AsyncIterable` |
 
 ## Disclaimer
 
